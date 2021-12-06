@@ -16,7 +16,7 @@ for ii = 1:nchannels
 end
 
 % take channels with above threshold correlations
-bestch = find(sumxcorr > 1.5*median(sumxcorr));
+bestch = find(sumxcorr > 1*mean(sumxcorr));
 
 % extract sensor locations
 xyz = locations;

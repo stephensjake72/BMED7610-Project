@@ -28,3 +28,5 @@ for subj = 1:numel(d)
 %     
     save(file, 'Feedback_Rec_signal', 'Feedback_Freq_response', '-append')
 end
+%% transfer function
+Gs = tfestimate

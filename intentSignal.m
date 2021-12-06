@@ -11,23 +11,30 @@ for subj = 1:numel(d)
     signal = data.eeg.imagery_right;
     eegsignal = signal(1:64, :);
     cues = find(data.eeg.imagery_event == 1);
-    stops = cues + 3*data.eeg.srate;
+    cues(data.eeg.bad_trial_indices.bad_trial_idx_voltage{1}) = [];
+    cues(data.eeg.bad_trial_indices.bad_trial_idx_voltage{2}) = [];
+    cues(data.eeg.bad_trial_indices.bad_trial_idx_mi{1}) = [];
+    cues(data.eeg.bad_trial_indices.bad_trial_idx_mi{2}) = [];
+    cues = cues + 2*data.eeg.srate;
+    
+    ns = 3;
+    stops = cues + ns*data.eeg.srate;
     
     nc = height(eegsignal);
-    S = cell(1, nc);
+    imS = cell(1, nc);
     Imagery_Freq_response = zeros(nc, stops(1)-cues(1));
     Imagery_Rec_signal = zeros(nc, stops(1)-cues(1));
     
     for ii = 1:nc
-        S{ii} = zeros(numel(cues), stops(1) - cues(1));
-        for jj = 1:numel(cues)
-            S{ii}(jj, :) = eegsignal(ii, cues(jj):stops(jj)-1);
+        imS{ii} = zeros(numel(cues), stops(1) - cues(1));
+        for jj = 1:numel(cues)-1
+            imS{ii}(jj, :) = eegsignal(ii, cues(jj):stops(jj)-1);
         end
     end
 
 
-    for c = 1:numel(S)
-        s = S{c};
+    for c = 1:numel(imS)
+        s = imS{c};
         s = s' - mean(s');
         s = lowpass(s, 100, data.eeg.srate);
         [nt, ch] = size(s);
@@ -51,7 +58,17 @@ for subj = 1:numel(d)
         
 %         fprintf([num2str(c) '\n'])
     end
-
+    
+    % plotting
+    if subj == 1
+        ts = (0:length(signal)-1)/data.eeg.srate;
+        tt = (0:ns*data.eeg.srate - 1)/data.eeg.srate;
+        for kk = 1:nc
+            figure
+            plot(tt, imS{kk})
+            xlabel('time(s)')
+        end
+    end
     % new movie
     % close all
     % x = eeg.psenloc(:, 1);
@@ -74,5 +91,18 @@ for subj = 1:numel(d)
     % end
     % close(v)
     
-    save(file, 'Imagery_Rec_signal', 'Imagery_Freq_response', '-append')
+    save(file, 'Imagery_Rec_signal', 'Imagery_Freq_response', 'imS', '-append')
 end
+
+%% figure
+a = 1;
+ts = (0:length(signal)-1)/data.eeg.srate;
+tt = (0:3*data.eeg.srate - 1)/data.eeg.srate;
+subplot(211)
+plot(ts, signal(1:64, :)')
+sgtitle('Signal Parsing')
+title('All Channels')
+xlabel('time (s)')
+subplot(212)
+plot(tt, imS{a}')
+xlabel('time(s)')

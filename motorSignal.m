@@ -11,23 +11,32 @@ for subj = 1:numel(d)
     signal = data.eeg.movement_right;
     eegsignal = signal(1:64, :);
     cues = find(data.eeg.movement_event == 1);
-    stops = cues + 3*data.eeg.srate;
+    deletecues = [data.eeg.bad_trial_indices.bad_trial_idx_voltage{1} < data.eeg.n_movement_trials, ...
+        data.eeg.bad_trial_indices.bad_trial_idx_voltage{2} < data.eeg.n_movement_trials] ;
+    cues(deletecues) = [];
+    cues(deletecues) = [];
+    % cues(data.eeg.bad_trial_indices.bad_trial_idx_mi{1}) = [];
+    % cues(data.eeg.bad_trial_indices.bad_trial_idx_mi{2}) = [];
+    cues = cues + 2*data.eeg.srate;
+    
+    ns = 3;
+    stops = cues + ns*data.eeg.srate;
     
     nc = height(eegsignal);
-    S = cell(1, nc);
+    motS = cell(1, nc);
     Motor_Freq_response = zeros(nc, stops(1)-cues(1));
     Motor_Rec_signal = zeros(nc, stops(1)-cues(1));
     
     for ii = 1:nc
-        S{ii} = zeros(numel(cues), stops(1) - cues(1));
+        motS{ii} = zeros(numel(cues), stops(1) - cues(1));
         for jj = 1:numel(cues)
-            S{ii}(jj, :) = eegsignal(ii, cues(jj):stops(jj)-1);
+            motS{ii}(jj, :) = eegsignal(ii, cues(jj):stops(jj)-1);
         end
     end
 
 
-    for c = 1:numel(S)
-        s = S{c};
+    for c = 1:numel(motS)
+        s = motS{c};
         s = s' - mean(s');
         s = lowpass(s, 100, data.eeg.srate);
         [nt, ch] = size(s);
@@ -50,5 +59,5 @@ for subj = 1:numel(d)
         
         fprintf([num2str(c) '\n'])
     end
-    save(file, 'Motor_Rec_signal', 'Motor_Freq_response', '-append')
+    save(file, 'Motor_Rec_signal', 'Motor_Freq_response', 'motS', '-append')
 end
