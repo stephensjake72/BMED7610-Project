@@ -2,74 +2,76 @@ clc
 clear
 close all
 
+% load data
 d = dir('C:\Users\Jake\Documents\Data\BMED7610_project');
 d = d(3:end);
-for subj = 1:numel(d)
+
+for subj = 1:numel(d) - 1
+    % load subject
     file = [d(subj).folder filesep d(subj).name];
     data = load(file);
-
+    
+    % load EEG
     signal = data.eeg.imagery_right;
     eegsignal = signal(1:64, :);
+    
+    % load cue times
     cues = find(data.eeg.imagery_event == 1);
+    
+    % remove bad trials
     cues(data.eeg.bad_trial_indices.bad_trial_idx_voltage{1}) = [];
     cues(data.eeg.bad_trial_indices.bad_trial_idx_voltage{2}) = [];
     cues(data.eeg.bad_trial_indices.bad_trial_idx_mi{1}) = [];
-    cues(data.eeg.bad_trial_indices.bad_trial_idx_mi{2}) = [];
+    
+    % advance 2 s according to experiment design
     cues = cues + 2*data.eeg.srate;
     
+    % stop window after 3 s
     ns = 3;
     stops = cues + ns*data.eeg.srate;
     
+    % create imagery response frequency and time series matrices
     nc = height(eegsignal);
     imS = cell(1, nc);
     Imagery_Freq_response = zeros(nc, stops(1)-cues(1));
     Imagery_Rec_signal = zeros(nc, stops(1)-cues(1));
     
+    % parse channels
     for ii = 1:nc
         imS{ii} = zeros(numel(cues), stops(1) - cues(1));
         for jj = 1:numel(cues)-1
             imS{ii}(jj, :) = eegsignal(ii, cues(jj):stops(jj)-1);
         end
     end
-
-
+    
+    % process channels
     for c = 1:numel(imS)
         s = imS{c};
-        s = s' - mean(s');
-        s = lowpass(s, 100, data.eeg.srate);
+        s = s' - mean(s'); % center
+        
         [nt, ch] = size(s);
-
+        
+        % get avg FFT signal
         f = fft(s);
         favg = mean(f, 2);
         savg = ifft(favg);
-        frange = 1:data.eeg.srate/2;
         Imagery_Freq_response(c, :) = favg;
         Imagery_Rec_signal(c, :) = savg;
-
-        lags = zeros(1, nt);
-
-        s1 = zeros(size(s));
-
-        for jj = 1:nt
-            s1(1:end-lags(jj)) = s(lags(jj)+1:end);
-        end
-
-        s1 = s1(1:end - max(lags), :);
         
 %         fprintf([num2str(c) '\n'])
     end
     
-    % plotting
-    if subj == 1
-        ts = (0:length(signal)-1)/data.eeg.srate;
-        tt = (0:ns*data.eeg.srate - 1)/data.eeg.srate;
-        for kk = 1:nc
-            figure
-            plot(tt, imS{kk})
-            xlabel('time(s)')
-        end
-    end
-    % new movie
+    % plot if needed
+%     if subj == 1
+%         ts = (0:length(signal)-1)/data.eeg.srate;
+%         tt = (0:ns*data.eeg.srate - 1)/data.eeg.srate;
+%         for kk = 1:nc
+%             figure
+%             plot(tt, imS{kk})
+%             xlabel('time(s)')
+%         end
+%     end
+    % write video if needed
     % close all
     % x = eeg.psenloc(:, 1);
     % y = eeg.psenloc(:, 2);
